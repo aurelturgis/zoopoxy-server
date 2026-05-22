@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import Stripe from "stripe";
+import fs from "fs";
 
 dotenv.config();
 
@@ -16,20 +17,16 @@ app.get("/", (req, res) => {
   res.send("Serveur Zoopoxy opérationnel ✔️");
 });
 
-// Exemple route menu
-app.get("/menu", (req, res) => {
-  res.json([
-    { id: 1, name: "Alien Zen", price: 120 },
-    { id: 2, name: "Cosmic Jelly", price: 90 }
-  ]);
-});
-
-// Route stock — CORRIGÉE
+// Route STOCK — lit stock.json
 app.get("/stock", (req, res) => {
-  res.json([
-    { id: 1, qty: 1 },
-    { id: 2, qty: 1 }
-  ]);
+  try {
+    const raw = fs.readFileSync("./stock.json", "utf8");
+    const data = JSON.parse(raw);
+    res.json(data);
+  } catch (err) {
+    console.error("Erreur lecture stock.json :", err);
+    res.json({ stock: [] });
+  }
 });
 
 // Stripe Checkout
@@ -38,13 +35,24 @@ app.post("/create-checkout-session", async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
-      line_items: req.body.items,
+      line_items: req.body.items.map(item => ({
+        price_data: {
+          currency: "eur",
+          product_data: {
+            name: item.name,
+            images: [item.image]
+          },
+          unit_amount: item.price
+        },
+        quantity: 1
+      })),
       success_url: "https://zoopoxy.com/success",
       cancel_url: "https://zoopoxy.com/cancel"
     });
 
     res.json({ url: session.url });
   } catch (error) {
+    console.error("Erreur Stripe :", error);
     res.status(500).json({ error: error.message });
   }
 });
