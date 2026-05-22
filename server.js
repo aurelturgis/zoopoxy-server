@@ -46,8 +46,8 @@ app.post("/create-checkout-session", async (req, res) => {
         },
         quantity: 1
       })),
-      success_url: "https://zoopoxy.com/success",
-      cancel_url: "https://zoopoxy.com/cancel"
+      success_url: "https://seagullairways.eu/success",
+      cancel_url: "https://seagullairways.eu/cancel"
     });
 
     res.json({ url: session.url });
