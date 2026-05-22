@@ -1,0 +1,88 @@
+{
+  "stock": [
+    {
+      "id": "ZENMASTER",
+      "name": "ZENMASTER",
+      "price": 13000,
+      "image": "assets/images/epoxy/soundcrack2.png",
+      "qty": 1
+    },
+    {
+      "id": "GRIBOUILLE",
+      "name": "GRIBOUILLE",
+      "price": 12000,
+      "image": "assets/images/epoxy/gribouille2.png",
+      "qty": 1
+    },
+    {
+      "id": "PRISMEA",
+      "name": "PRISMEA",
+      "price": 11000,
+      "image": "assets/images/epoxy/prismea2.png",
+      "qty": 1
+    },
+    {
+      "id": "REDROSES",
+      "name": "RED ROSES",
+      "price": 18000,
+      "image": "assets/images/epoxy/redroses2.png",
+      "qty": 1
+    },
+    {
+      "id": "BULLRIDER",
+      "name": "BULL RIDER",
+      "price": 24000,
+      "image": "assets/images/epoxy/bullrider2.png",
+      "qty": 1
+    },
+    {
+      "id": "TURBO",
+      "name": "TURBO",
+      "price": 24000,
+      "image": "assets/images/epoxy/turbo2.png",
+      "qty": 1
+    },
+    {
+      "id": "ORNELIUS",
+      "name": "ORNELIUS",
+      "price": 12000,
+      "image": "assets/images/epoxy/ornelius2.png",
+      "qty": 1
+    },
+    {
+      "id": "ASTRA",
+      "name": "ASTRA",
+      "price": 10000,
+      "image": "assets/images/epoxy/licorne2.png",
+      "qty": 1
+    },
+    {
+      "id": "ORNELIA",
+      "name": "ORNELIA",
+      "price": 13000,
+      "image": "assets/images/epoxy/ornelia2.png",
+      "qty": 1
+    },
+    {
+      "id": "LULU",
+      "name": "LULU'S FAMILY",
+      "price": 9000,
+      "image": "assets/images/epoxy/lulu2.png",
+      "qty": 1
+    },
+    {
+      "id": "ATEN",
+      "name": "ATEN'S FAMILY",
+      "price": 8000,
+      "image": "assets/images/epoxy/aten2.png",
+      "qty": 1
+    },
+    {
+      "id": "NISHIKIGOI",
+      "name": "NISHIKIGOI",
+      "price": 11000,
+      "image": "assets/images/epoxy/nishikigoi2.png",
+      "qty": 1
+    }
+  ]
+}
