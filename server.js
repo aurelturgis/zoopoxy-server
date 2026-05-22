@@ -18,22 +18,18 @@ app.get("/", (req, res) => {
 
 // Exemple route menu
 app.get("/menu", (req, res) => {
-  res.json({
-    items: [
-      { id: 1, name: "Alien Zen", price: 120 },
-      { id: 2, name: "Cosmic Jelly", price: 90 }
-    ]
-  });
+  res.json([
+    { id: 1, name: "Alien Zen", price: 120 },
+    { id: 2, name: "Cosmic Jelly", price: 90 }
+  ]);
 });
 
-// Exemple route stock
+// Route stock — CORRIGÉE
 app.get("/stock", (req, res) => {
-  res.json({
-    stock: [
-      { id: 1, qty: 1 },
-      { id: 2, qty: 1 }
-    ]
-  });
+  res.json([
+    { id: 1, qty: 1 },
+    { id: 2, qty: 1 }
+  ]);
 });
 
 // Stripe Checkout
