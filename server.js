@@ -1,212 +1,60 @@
 import express from "express";
-import fs from "fs";
-import path from "path";
-import Stripe from "stripe";
-import dotenv from "dotenv";
-import { fileURLToPath } from "url";
-import nodemailer from "nodemailer";
 import cors from "cors";
-
-dotenv.config(); // 1ï¸âƒ£ Charger les variables
+import dotenv from "dotenv";
+import Stripe from "stripe";
 
 dotenv.config();
 
-const app = express();        // ⭐ UN SEUL
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-app.use(cors({
-  origin: "https://seagullairways.eu",
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type"]
-}));
-
-// ------------------------------
-// FIX ES MODULES (__dirname)
-// ------------------------------
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// ------------------------------
-// EMAIL TRANSPORT
-// ------------------------------
-const transporter = nodemailer.createTransport({
-  host: process.env.MAIL_HOST,
-  port: process.env.MAIL_PORT,
-  secure: true,
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS
-  }
-});
-
-// ------------------------------
-// SERVE PUBLIC
-// ------------------------------
-const publicPath = path.join(__dirname, "../public");
-app.use(express.static(publicPath));
-
-// ------------------------------
-// STOCK.JSON
-// ------------------------------
-const stockPath = path.join(__dirname, "../public/assets/data/stock.json");
-
-function loadStock() {
-  return JSON.parse(fs.readFileSync(stockPath, "utf8"));
-}
-
-function saveStock(stock) {
-  fs.writeFileSync(stockPath, JSON.stringify(stock, null, 2), "utf8");
-}
-
-// ------------------------------
-// WEBHOOK STRIPE (RAW BODY)
-// ------------------------------
-app.post(
-  "/webhook",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    const sig = req.headers["stripe-signature"];
-
-    let event;
-    try {
-      event = stripe.webhooks.constructEvent(
-        req.body,
-        sig,
-        process.env.STRIPE_WEBHOOK_SECRET
-      );
-    } catch (err) {
-      console.error("âŒ Webhook signature error :", err.message);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-
-      const items = JSON.parse(session.metadata.items);
-      console.log("âœ” Paiement validÃ© pour :", items);
-
-      const stock = loadStock();
-
-      items.forEach(item => {
-        const product = stock.find(p => p.id === item.id);
-        if (product) {
-          product.stock = 0;
-          product.sold = true;
-        }
-      });
-
-      saveStock(stock);
-      console.log("âœ” Stock mis Ã  jour");
-
-      const commandesPath = path.join(__dirname, "./commandes.json");
-      let commandes = [];
-
-      try {
-        commandes = JSON.parse(fs.readFileSync(commandesPath, "utf8"));
-      } catch (err) {
-        console.error("âš  commandes.json introuvable, crÃ©ation d'un nouveau fichier.");
-      }
-
-      const nouvelleCommande = {
-        id_stripe: session.id,
-        items: items,
-        amount_total: session.amount_total,
-        currency: session.currency,
-        email: session.customer_details.email,
-        name: session.customer_details.name,
-        address: session.customer_details.address,
-        date: new Date().toISOString()
-      };
-
-      commandes.push(nouvelleCommande);
-      fs.writeFileSync(commandesPath, JSON.stringify(commandes, null, 2));
-
-      console.log("âœ” Commande enregistrÃ©e");
-
-      await transporter.sendMail({
-        from: process.env.MAIL_FROM,
-        to: session.customer_details.email,
-        subject: "Votre commande est confirmÃ©e âœ”",
-        html: `
-          <h2>Merci pour votre commande !</h2>
-          <p>Bonjour ${session.customer_details.name},</p>
-          <p>Votre commande est confirmÃ©e.</p>
-          <p>Total payÃ© : <strong>${(session.amount_total / 100).toFixed(2)} â‚¬</strong></p>
-        `
-      });
-
-      await transporter.sendMail({
-        from: process.env.MAIL_FROM,
-        to: process.env.MAIL_USER,
-        subject: "Nouvelle commande reÃ§ue ðŸ›’",
-        html: `
-          <h2>Nouvelle commande</h2>
-          <p>Produits : <strong>${items.map(i => i.id).join(", ")}</strong></p>
-          <p>Total : ${(session.amount_total / 100).toFixed(2)} â‚¬</p>
-          <p>Email client : ${session.customer_details.email}</p>
-        `
-      });
-
-      console.log("ðŸ“§ Emails envoyÃ©s");
-    }
-
-    res.json({ received: true });
-  }
-);
-
-// ------------------------------
-// MIDDLEWARE JSON (APRÃˆS WEBHOOK)
-// ------------------------------
+const app = express();
+app.use(cors());
 app.use(express.json());
 
-// ------------------------------
-// ROUTE : CRÃ‰ATION SESSION STRIPE
-// ------------------------------
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Route d'accueil
+app.get("/", (req, res) => {
+  res.send("Serveur Zoopoxy opérationnel ✔️");
+});
+
+// Exemple route menu
+app.get("/menu", (req, res) => {
+  res.json({
+    items: [
+      { id: 1, name: "Alien Zen", price: 120 },
+      { id: 2, name: "Cosmic Jelly", price: 90 }
+    ]
+  });
+});
+
+// Exemple route stock
+app.get("/stock", (req, res) => {
+  res.json({
+    stock: [
+      { id: 1, qty: 1 },
+      { id: 2, qty: 1 }
+    ]
+  });
+});
+
+// Stripe Checkout
 app.post("/create-checkout-session", async (req, res) => {
   try {
-    const { items } = req.body;
-
-    const stock = loadStock();
-
-    const line_items = items.map(item => {
-      const product = stock.find(p => p.id === item.id);
-      return {
-        price_data: {
-          currency: "eur",
-          product_data: { name: product.name },
-          unit_amount: product.price
-        },
-        quantity: 1
-      };
-    });
-
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
-      billing_address_collection: "required",
-      shipping_address_collection: {
-        allowed_countries: ["FR", "BE", "CH", "LU", "DE", "ES", "IT", "NL", "PT"]
-      },
-      line_items,
-      metadata: {
-        items: JSON.stringify(items)
-      },
-      success_url: `${process.env.BASE_URL}/success.html`,
-      cancel_url: `${process.env.BASE_URL}/cancel.html`
+      line_items: req.body.items,
+      success_url: "https://zoopoxy.com/success",
+      cancel_url: "https://zoopoxy.com/cancel"
     });
 
     res.json({ url: session.url });
-
-  } catch (err) {
-    console.error("Erreur Stripe :", err);
-    res.status(500).json({ error: "Erreur crÃ©ation session Stripe" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
-// ------------------------------
-// LANCER LE SERVEUR (RENDER)
-// ------------------------------
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("Serveur en ligne sur port " + PORT);
+// Port Render
+const port = process.env.PORT || 10000;
+app.listen(port, () => {
+  console.log("Serveur en ligne sur port " + port);
 });
