@@ -1,0 +1,38 @@
+[
+  {
+    "id_stripe": "cs_test_a1ZclaKBqUbdJkeZKMwCtnf7NysPkeZIMPXm78xAx0KUN7LiLgG4ydkOPL",
+    "productId": "prismea",
+    "country": "FR",
+    "amount_total": 11990,
+    "currency": "eur",
+    "email": "aurelturgis@gmail.com",
+    "name": "toto",
+    "address": {
+      "city": "Paris",
+      "country": "FR",
+      "line1": "190 Rue du Faubourg Saint-Antoine",
+      "line2": null,
+      "postal_code": "75012",
+      "state": null
+    },
+    "date": "2026-05-16T08:46:35.557Z"
+  },
+  {
+    "id_stripe": "cs_test_a1KqJsTJMxSOLOCy2NY0qtUYIuL9IOyhLqL9uDoEISUrsR1HY6F536EuA7",
+    "productId": "prismea",
+    "country": "FR",
+    "amount_total": 11990,
+    "currency": "eur",
+    "email": "aurelturgis@gmail.com",
+    "name": "toto",
+    "address": {
+      "city": "Paris",
+      "country": "FR",
+      "line1": "58 Avenue Gambetta",
+      "line2": null,
+      "postal_code": "75020",
+      "state": null
+    },
+    "date": "2026-05-16T08:54:56.803Z"
+  }
+]

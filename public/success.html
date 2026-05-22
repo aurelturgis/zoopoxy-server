@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paiement confirmé</title>
+<link rel="icon" type="image/jpg" href="../public/assets/images/icon_seagull.jpg" />
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", sans-serif;
+        background: #0d0d0d;
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        text-align: center;
+    }
+
+    .container {
+        max-width: 420px;
+        padding: 40px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,123,0,0.8);;
+        border-radius: 14px;
+        backdrop-filter: blur(8px);
+        animation: fadeIn 0.8s ease-out;
+    }
+
+    h1 {
+        font-size: 28px;
+        margin-bottom: 10px;
+        letter-spacing: 1px;
+    }
+
+    p {
+        font-size: 16px;
+        opacity: 0.85;
+        margin-bottom: 30px;
+    }
+
+    .btn {
+        display: inline-block;
+        padding: 14px 28px;
+        background: #ff7b00;
+        color: #fff;
+        border-radius: 8px;
+        font-weight: bold;
+        text-decoration: none;
+        transition: 0.25s;
+    }
+
+    .btn:hover {
+        background: #FF0000;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head>
+<body>
+
+<div class="container">
+    <h1>🎉 Paiement confirmé</h1>
+    <p>Merci pour votre achat !  
+    Votre commande est maintenant enregistrée et sera traitée dans les plus brefs délais.</p>
+
+    <a href="index.html" class="btn">Retour à la boutique</a>
+</div>
+
+</body>
+</html>
+

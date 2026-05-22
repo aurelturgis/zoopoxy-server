@@ -1,0 +1,96 @@
+html, body { height: 100%; }
+body.legal-page {
+  margin: 0;
+  background-color: #000;
+  color: #fff;
+  font-family: 'Helvetica Neue', sans-serif;
+  line-height: 1.6;
+  display: flex; flex-direction: column;
+}
+
+/* Logo centré */
+.legal-header {
+  text-align: center;
+  padding: 30px 20px;
+}
+.legal-logo {
+  max-width: 200px;
+  height: auto;
+}
+
+/* Contenu */
+.legal-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+.legal-content h1 {
+  text-align: center;
+  font-size: 2em;
+  margin-bottom: 30px;
+}
+.legal-content h2 {
+  text-align: center;
+  font-size: 1em;
+  margin-bottom: 30px;
+}
+.legal-content p {
+  text-align: center;
+  font-size: 1em;
+  margin-bottom: 30px;
+}
+.legal-content a {
+ color: white;
+}
+/* Footer inversé */
+.legal-footer {
+  background-color: #fff;
+  color: #000;
+  text-align: center;
+  padding: 15px 10px;
+  font-size: 0.9rem;
+  margin-top: auto;
+}
+footer a {
+text-decoration: none;
+color: black;
+}
+footer a:hover{
+color: #0033FF;
+}
+
+/* Responsive */
+@media screen and (max-width: 768px) {
+  .legal-logo {
+    max-width: 150px;
+  }
+  .legal-content {
+    padding: 15px;
+  }
+  .legal-content h1 {
+    font-size: 1.6rem;
+  }
+  .legal-footer {
+    font-size: 0.8rem;
+    padding: 10px;
+  }
+		
+	
+
+
+
+	
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+

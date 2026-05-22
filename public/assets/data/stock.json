@@ -1,0 +1,110 @@
+[
+  {
+    "id": "ZENMASTER",
+    "name": "ZENMASTER",
+    "price": 13000,
+    "image": "assets/images/epoxy/soundcrack2.png",
+    "stock": 1,
+    "sold": false,
+    "weight": 680
+  },
+  {
+    "id": "GRIBOUILLE",
+    "name": "GRIBOUILLE",
+    "price": 12000,
+    "image": "assets/images/epoxy/gribouille2.png",
+    "stock": 1,
+    "sold": false,
+    "weight": 593
+  },
+  {
+    "id": "PRISMEA",
+    "name": "PRISMEA",
+    "price": 11000,
+    "image": "assets/images/epoxy/prismea2.png",
+    "stock": 1,
+    "sold": false,
+    "weight": 440
+  },
+  {
+    "id": "REDROSES",
+    "name": "RED ROSES",
+    "price": 18000,
+    "image": "assets/images/epoxy/redroses2.png",
+    "stock": 1,
+    "sold": false,
+    "weight": 525
+  },
+  {
+    "id": "BULLRIDER",
+    "name": "BULL RIDER",
+    "price": 24000,
+    "image": "assets/images/epoxy/bullrider2.png",
+    "stock": 1,
+    "sold": false,
+    "weight": 730
+  },
+  {
+    "id": "TURBO",
+    "name": "TURBO",
+    "price": 24000,
+    "image": "assets/images/epoxy/turbo2.png",
+    "stock": 1,
+    "sold": false,
+    "weight": 595
+  },
+  {
+    "id": "ORNELIUS",
+    "name": "ORNELIUS",
+    "price": 12000,
+    "image": "assets/images/epoxy/ornelius2.png",
+    "stock": 1,
+    "sold": false,
+    "weight": 501
+  },
+  {
+    "id": "ASTRA",
+    "name": "ASTRA",
+    "price": 10000,
+    "image": "assets/images/epoxy/licorne2.png",
+    "stock": 1,
+    "sold": false,
+    "weight": 260
+  },
+  {
+    "id": "ORNELIA",
+    "name": "ORNELIA",
+    "price": 13000,
+    "image": "assets/images/epoxy/ornelia2.png",
+    "stock": 1,
+    "sold": false,
+    "weight": 637
+  },
+  {
+    "id": "LULU",
+    "name": "LULU'S FAMILY",
+    "price": 9000,
+    "image": "assets/images/epoxy/lulu2.png",
+    "stock": 1,
+    "sold": false,
+    "weight": 400
+  },
+  {
+    "id": "ATEN",
+    "name": "ATEN'S FAMILY",
+    "price": 8000,
+    "image": "assets/images/epoxy/aten2.png",
+    "stock": 1,
+    "sold": false,
+    "weight": 407
+  },
+  {
+    "id": "NISHIKIGOI",
+    "name": "NISHIKIGOI",
+    "price": 11000,
+    "image": "assets/images/epoxy/nishikigoi2.png",
+    "stock": 1,
+    "sold": false,
+    "weight": 800
+  }
+]
