@@ -5,17 +5,26 @@ import Stripe from "stripe";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
+import cors from "cors";
+
+dotenv.config(); // 1ï¸âƒ£ Charger les variables
 
 dotenv.config();
+
+const app = express();        // ⭐ UN SEUL
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+app.use(cors({
+  origin: "https://seagullairways.eu",
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type"]
+}));
 
 // ------------------------------
 // FIX ES MODULES (__dirname)
 // ------------------------------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const app = express();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // ------------------------------
 // EMAIL TRANSPORT
@@ -66,23 +75,18 @@ app.post(
         process.env.STRIPE_WEBHOOK_SECRET
       );
     } catch (err) {
-      console.error("❌ Webhook signature error :", err.message);
+      console.error("âŒ Webhook signature error :", err.message);
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    // ------------------------------
-    // TRAITEMENT DU PAIEMENT
-    // ------------------------------
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 
       const items = JSON.parse(session.metadata.items);
-      console.log("✔ Paiement validé pour :", items);
+      console.log("âœ” Paiement validÃ© pour :", items);
 
-      // Charger stock
       const stock = loadStock();
 
-      // Marquer chaque pièce comme vendue
       items.forEach(item => {
         const product = stock.find(p => p.id === item.id);
         if (product) {
@@ -92,16 +96,15 @@ app.post(
       });
 
       saveStock(stock);
-      console.log("✔ Stock mis à jour");
+      console.log("âœ” Stock mis Ã  jour");
 
-      // Enregistrement commande
       const commandesPath = path.join(__dirname, "./commandes.json");
       let commandes = [];
 
       try {
         commandes = JSON.parse(fs.readFileSync(commandesPath, "utf8"));
       } catch (err) {
-        console.error("⚠ commandes.json introuvable, création d'un nouveau fichier.");
+        console.error("âš  commandes.json introuvable, crÃ©ation d'un nouveau fichier.");
       }
 
       const nouvelleCommande = {
@@ -118,35 +121,33 @@ app.post(
       commandes.push(nouvelleCommande);
       fs.writeFileSync(commandesPath, JSON.stringify(commandes, null, 2));
 
-      console.log("✔ Commande enregistrée");
+      console.log("âœ” Commande enregistrÃ©e");
 
-      // Email client
       await transporter.sendMail({
         from: process.env.MAIL_FROM,
         to: session.customer_details.email,
-        subject: "Votre commande est confirmée ✔",
+        subject: "Votre commande est confirmÃ©e âœ”",
         html: `
           <h2>Merci pour votre commande !</h2>
           <p>Bonjour ${session.customer_details.name},</p>
-          <p>Votre commande est confirmée.</p>
-          <p>Total payé : <strong>${(session.amount_total / 100).toFixed(2)} €</strong></p>
+          <p>Votre commande est confirmÃ©e.</p>
+          <p>Total payÃ© : <strong>${(session.amount_total / 100).toFixed(2)} â‚¬</strong></p>
         `
       });
 
-      // Email interne
       await transporter.sendMail({
         from: process.env.MAIL_FROM,
         to: process.env.MAIL_USER,
-        subject: "Nouvelle commande reçue 🛒",
+        subject: "Nouvelle commande reÃ§ue ðŸ›’",
         html: `
           <h2>Nouvelle commande</h2>
           <p>Produits : <strong>${items.map(i => i.id).join(", ")}</strong></p>
-          <p>Total : ${(session.amount_total / 100).toFixed(2)} €</p>
+          <p>Total : ${(session.amount_total / 100).toFixed(2)} â‚¬</p>
           <p>Email client : ${session.customer_details.email}</p>
         `
       });
 
-      console.log("📧 Emails envoyés");
+      console.log("ðŸ“§ Emails envoyÃ©s");
     }
 
     res.json({ received: true });
@@ -154,12 +155,12 @@ app.post(
 );
 
 // ------------------------------
-// MIDDLEWARE JSON (APRÈS WEBHOOK)
+// MIDDLEWARE JSON (APRÃˆS WEBHOOK)
 // ------------------------------
 app.use(express.json());
 
 // ------------------------------
-// ROUTE : CRÉATION SESSION STRIPE
+// ROUTE : CRÃ‰ATION SESSION STRIPE
 // ------------------------------
 app.post("/create-checkout-session", async (req, res) => {
   try {
@@ -198,7 +199,7 @@ app.post("/create-checkout-session", async (req, res) => {
 
   } catch (err) {
     console.error("Erreur Stripe :", err);
-    res.status(500).json({ error: "Erreur création session Stripe" });
+    res.status(500).json({ error: "Erreur crÃ©ation session Stripe" });
   }
 });
 
