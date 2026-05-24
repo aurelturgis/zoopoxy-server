@@ -2,7 +2,7 @@
   "name": "zoopoxy-server",
   "version": "1.0.0",
   "description": "Backend Stripe + Stock + Webhook + Email",
-  "main": "server.js",
+  "main": "api.js",
   "type": "module",
   "scripts": {
     "start": "node api.js"
