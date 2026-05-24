@@ -12,12 +12,16 @@ app.use(express.json());
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Route d'accueil
+// ------------------------------
+// ROUTE D'ACCUEIL
+// ------------------------------
 app.get("/", (req, res) => {
   res.send("Serveur Zoopoxy opérationnel ✔️");
 });
 
-// Route STOCK — lit stock.json
+// ------------------------------
+// ROUTE STOCK
+// ------------------------------
 app.get("/stock", (req, res) => {
   try {
     const raw = fs.readFileSync("./stock.json", "utf8");
@@ -28,19 +32,23 @@ app.get("/stock", (req, res) => {
     res.json({ stock: [] });
   }
 });
+
+// ------------------------------
+// CHECKOUT STRIPE
+// ------------------------------
 app.post("/create-checkout-session", async (req, res) => {
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
 
-      // ⭐ Collecte complète des infos client
+      // Infos client
       customer_creation: "always",
       billing_address_collection: "required",
 
       shipping_address_collection: {
         allowed_countries: [
-          "FR", 
+          "FR",
           "BE", "CH", "LU", "DE", "ES", "IT", "NL", "PT", "AT", "DK", "SE", "FI", "IE",
           "GB",
           "US", "CA", "AU", "JP",
@@ -54,7 +62,6 @@ app.post("/create-checkout-session", async (req, res) => {
 
       // ⭐ TES 5 FRAIS DE PORT
       shipping_options: [
-        // 🇫🇷 France
         {
           shipping_rate_data: {
             type: "fixed_amount",
@@ -66,8 +73,6 @@ app.post("/create-checkout-session", async (req, res) => {
             }
           }
         },
-
-        // 🇪🇺 Europe
         {
           shipping_rate_data: {
             type: "fixed_amount",
@@ -79,8 +84,6 @@ app.post("/create-checkout-session", async (req, res) => {
             }
           }
         },
-
-        // 🇬🇧 Royaume-Uni
         {
           shipping_rate_data: {
             type: "fixed_amount",
@@ -92,8 +95,6 @@ app.post("/create-checkout-session", async (req, res) => {
             }
           }
         },
-
-        // 🌍 International Zone B3
         {
           shipping_rate_data: {
             type: "fixed_amount",
@@ -105,8 +106,6 @@ app.post("/create-checkout-session", async (req, res) => {
             }
           }
         },
-
-        // 🌍 International Zone C4
         {
           shipping_rate_data: {
             type: "fixed_amount",
@@ -120,7 +119,7 @@ app.post("/create-checkout-session", async (req, res) => {
         }
       ],
 
-      // ⭐ Produits
+      // Produits
       line_items: req.body.items.map(item => ({
         price_data: {
           currency: "eur",
@@ -133,20 +132,22 @@ app.post("/create-checkout-session", async (req, res) => {
         quantity: 1
       })),
 
-      // ⭐ URLs de retour
+      // URLs de retour
       success_url: "https://seagullairways.eu/success",
       cancel_url: "https://seagullairways.eu/cancel"
     });
-// ------------------------------
-// LANCER LE SERVEUR
-// ------------------------------
-const port = process.env.PORT || 10000;
-app.listen(port, () => {
-  console.log("Serveur Zoopoxy opérationnel sur le port " + port);
-});
+
     res.json({ url: session.url });
   } catch (error) {
     console.error("Erreur Stripe :", error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// ------------------------------
+// LANCEMENT DU SERVEUR
+// ------------------------------
+const port = process.env.PORT || 10000;
+app.listen(port, () => {
+  console.log("Serveur Zoopoxy opérationnel sur le port " + port);
 });
