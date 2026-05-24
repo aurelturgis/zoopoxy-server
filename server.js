@@ -1,3 +1,33 @@
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import Stripe from "stripe";
+import fs from "fs";
+
+dotenv.config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Route d'accueil
+app.get("/", (req, res) => {
+  res.send("Serveur Zoopoxy opérationnel ✔️");
+});
+
+// Route STOCK — lit stock.json
+app.get("/stock", (req, res) => {
+  try {
+    const raw = fs.readFileSync("./stock.json", "utf8");
+    const data = JSON.parse(raw);
+    res.json(data);
+  } catch (err) {
+    console.error("Erreur lecture stock.json :", err);
+    res.json({ stock: [] });
+  }
+});
 app.post("/create-checkout-session", async (req, res) => {
   try {
     const session = await stripe.checkout.sessions.create({
