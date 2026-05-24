@@ -137,7 +137,13 @@ app.post("/create-checkout-session", async (req, res) => {
       success_url: "https://seagullairways.eu/success",
       cancel_url: "https://seagullairways.eu/cancel"
     });
-
+// ------------------------------
+// LANCER LE SERVEUR
+// ------------------------------
+const port = process.env.PORT || 10000;
+app.listen(port, () => {
+  console.log("Serveur Zoopoxy opérationnel sur le port " + port);
+});
     res.json({ url: session.url });
   } catch (error) {
     console.error("Erreur Stripe :", error);
