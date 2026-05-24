@@ -3,7 +3,6 @@ import cors from "cors";
 import dotenv from "dotenv";
 import Stripe from "stripe";
 import fs from "fs";
-import path from "path";
 import bodyParser from "body-parser";
 import nodemailer from "nodemailer";
 
@@ -13,13 +12,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Stripe
+// ------------------------------
+// STRIPE
+// ------------------------------
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Transport email
+// ------------------------------
+// EMAIL (IONOS)
+// ------------------------------
 const transporter = nodemailer.createTransport({
   host: process.env.MAIL_HOST,
-  port: process.env.MAIL_PORT,
+  port: Number(process.env.MAIL_PORT),
   secure: process.env.MAIL_SECURE === "true",
   auth: {
     user: process.env.MAIL_USER,
@@ -171,33 +174,47 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req, r
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // ------------------------------
-  // ✔ Paiement validé
-  // ------------------------------
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
 
     console.log("✔ Paiement reçu :", session.id);
 
     // ------------------------------
-    // MISE À JOUR DU STOCK
+    // RÉCUPÉRATION DES LINE ITEMS
     // ------------------------------
+    let productName = null;
     try {
-      const raw = fs.readFileSync("./stock.json", "utf8");
-      const stock = JSON.parse(raw);
-
-      const productName = session.display_items?.[0]?.custom?.name;
-
-      if (productName) {
-        const item = stock.find(p => p.name === productName);
-        if (item) {
-          item.qty = 0;
-          fs.writeFileSync("./stock.json", JSON.stringify(stock, null, 2));
-          console.log("✔ Stock mis à jour :", productName);
-        }
+      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+        limit: 1
+      });
+      if (lineItems.data.length > 0) {
+        productName = lineItems.data[0].description;
       }
     } catch (err) {
-      console.error("❌ Erreur mise à jour stock :", err);
+      console.error("❌ Erreur récupération line_items :", err);
+    }
+
+    // ------------------------------
+    // MISE À JOUR DU STOCK
+    // ------------------------------
+    if (productName) {
+      try {
+        const raw = fs.readFileSync("./stock.json", "utf8");
+        const stock = JSON.parse(raw);
+
+        const item = stock.find(p => p.name === productName);
+        if (item) {
+          item.qty = 0; // pièce unique → vendu
+          fs.writeFileSync("./stock.json", JSON.stringify(stock, null, 2));
+          console.log("✔ Stock mis à jour :", productName);
+        } else {
+          console.warn("⚠ Produit non trouvé dans stock.json :", productName);
+        }
+      } catch (err) {
+        console.error("❌ Erreur mise à jour stock :", err);
+      }
+    } else {
+      console.warn("⚠ Aucun nom de produit récupéré depuis Stripe");
     }
 
     // ------------------------------
@@ -212,7 +229,7 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req, r
           <h2>Merci pour votre commande !</h2>
           <p>Bonjour ${session.customer_details.name},</p>
           <p>Votre commande a bien été validée.</p>
-          <p><strong>Produit :</strong> ${session.display_items?.[0]?.custom?.name}</p>
+          <p><strong>Produit :</strong> ${productName || "Votre œuvre Zoopoxy"}</p>
           <p><strong>Total :</strong> ${(session.amount_total / 100).toFixed(2)} €</p>
           <p><strong>Adresse :</strong><br>
             ${session.customer_details.address.line1}<br>
@@ -236,7 +253,7 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req, r
         subject: "Nouvelle commande Zoopoxy 🛒",
         html: `
           <h2>Nouvelle commande reçue</h2>
-          <p><strong>Produit :</strong> ${session.display_items?.[0]?.custom?.name}</p>
+          <p><strong>Produit :</strong> ${productName || "Produit non identifié"}</p>
           <p><strong>Total :</strong> ${(session.amount_total / 100).toFixed(2)} €</p>
           <p><strong>Client :</strong> ${session.customer_details.name}</p>
           <p><strong>Email :</strong> ${session.customer_details.email}</p>
@@ -262,4 +279,3 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req, r
 const port = process.env.PORT || 10000;
 app.listen(port, () => {
   console.log("Serveur Zoopoxy opérationnel sur le port " + port);
-});
