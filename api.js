@@ -103,10 +103,10 @@ app.post(
           const raw = fs.readFileSync("./stock.json", "utf8");
           const stock = JSON.parse(raw);
 
-          const item = stock.find((p) => p.name === productName);
+          const item = stock.stock.find((p) => p.name === productName);
           if (item) {
             item.qty = 0; // pièce unique → vendu
-            fs.writeFileSync("./stock.json", JSON.stringify(stock, null, 2));
+            fs.writeFileSync("./stock.json", JSON.stringify({ stock: stock.stock }, null, 2));
             console.log("✔ Stock mis à jour :", productName);
           } else {
             console.warn("⚠ Produit non trouvé dans stock.json :", productName);
