@@ -9,26 +9,82 @@ app.post("/create-checkout-session", async (req, res) => {
       billing_address_collection: "required",
 
       shipping_address_collection: {
-        allowed_countries: ["FR", "BE", "CH", "LU"]
+        allowed_countries: [
+          "FR", 
+          "BE", "CH", "LU", "DE", "ES", "IT", "NL", "PT", "AT", "DK", "SE", "FI", "IE",
+          "GB",
+          "US", "CA", "AU", "JP",
+          "BR", "AR", "ZA", "CN", "IN"
+        ]
       },
 
       phone_number_collection: {
         enabled: true
       },
 
-      // ⭐ Frais de port (exemple : 15€)
+      // ⭐ TES 5 FRAIS DE PORT
       shipping_options: [
+        // 🇫🇷 France
         {
           shipping_rate_data: {
             type: "fixed_amount",
-            fixed_amount: {
-              amount: 1500, // 15€
-              currency: "eur"
-            },
-            display_name: "Livraison standard",
+            fixed_amount: { amount: 990, currency: "eur" },
+            display_name: "Livraison France",
+            delivery_estimate: {
+              minimum: { unit: "business_day", value: 2 },
+              maximum: { unit: "business_day", value: 4 }
+            }
+          }
+        },
+
+        // 🇪🇺 Europe
+        {
+          shipping_rate_data: {
+            type: "fixed_amount",
+            fixed_amount: { amount: 1939, currency: "eur" },
+            display_name: "Livraison Europe",
             delivery_estimate: {
               minimum: { unit: "business_day", value: 3 },
-              maximum: { unit: "business_day", value: 5 }
+              maximum: { unit: "business_day", value: 7 }
+            }
+          }
+        },
+
+        // 🇬🇧 Royaume-Uni
+        {
+          shipping_rate_data: {
+            type: "fixed_amount",
+            fixed_amount: { amount: 2329, currency: "eur" },
+            display_name: "Livraison Royaume-Uni",
+            delivery_estimate: {
+              minimum: { unit: "business_day", value: 4 },
+              maximum: { unit: "business_day", value: 8 }
+            }
+          }
+        },
+
+        // 🌍 International Zone B3
+        {
+          shipping_rate_data: {
+            type: "fixed_amount",
+            fixed_amount: { amount: 2839, currency: "eur" },
+            display_name: "International Zone B3",
+            delivery_estimate: {
+              minimum: { unit: "business_day", value: 5 },
+              maximum: { unit: "business_day", value: 12 }
+            }
+          }
+        },
+
+        // 🌍 International Zone C4
+        {
+          shipping_rate_data: {
+            type: "fixed_amount",
+            fixed_amount: { amount: 3919, currency: "eur" },
+            display_name: "International Zone C4",
+            delivery_estimate: {
+              minimum: { unit: "business_day", value: 7 },
+              maximum: { unit: "business_day", value: 15 }
             }
           }
         }
