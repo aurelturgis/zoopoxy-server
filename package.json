@@ -11,7 +11,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "fs": "0.0.1-security",
     "nodemailer": "^6.9.13",
     "stripe": "^14.0.0"
   }
+}
