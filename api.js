@@ -10,7 +10,9 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+
+// ⚠️ IMPORTANT : NE PAS mettre express.json() ici
+// Stripe a besoin du RAW BODY pour vérifier la signature
 
 // ------------------------------
 // STRIPE
@@ -52,6 +54,139 @@ app.get("/stock", (req, res) => {
 });
 
 // ------------------------------
+// WEBHOOK STRIPE (RAW BODY)
+// ------------------------------
+app.post(
+  "/webhook",
+  bodyParser.raw({ type: "application/json" }),
+  async (req, res) => {
+    const sig = req.headers["stripe-signature"];
+
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err) {
+      console.error("❌ Erreur signature webhook :", err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+
+      console.log("✔ Paiement reçu :", session.id);
+
+      // ------------------------------
+      // RÉCUPÉRATION DES LINE ITEMS
+      // ------------------------------
+      let productName = null;
+      try {
+        const lineItems = await stripe.checkout.sessions.listLineItems(
+          session.id,
+          { limit: 1 }
+        );
+        if (lineItems.data.length > 0) {
+          productName = lineItems.data[0].description;
+        }
+      } catch (err) {
+        console.error("❌ Erreur récupération line_items :", err);
+      }
+
+      // ------------------------------
+      // MISE À JOUR DU STOCK
+      // ------------------------------
+      if (productName) {
+        try {
+          const raw = fs.readFileSync("./stock.json", "utf8");
+          const stock = JSON.parse(raw);
+
+          const item = stock.find((p) => p.name === productName);
+          if (item) {
+            item.qty = 0; // pièce unique → vendu
+            fs.writeFileSync("./stock.json", JSON.stringify(stock, null, 2));
+            console.log("✔ Stock mis à jour :", productName);
+          } else {
+            console.warn("⚠ Produit non trouvé dans stock.json :", productName);
+          }
+        } catch (err) {
+          console.error("❌ Erreur mise à jour stock :", err);
+        }
+      }
+
+      // ------------------------------
+      // EMAIL CLIENT
+      // ------------------------------
+      try {
+        await transporter.sendMail({
+          from: process.env.MAIL_FROM,
+          to: session.customer_details.email,
+          subject: "Votre commande Zoopoxy est confirmée ✔",
+          html: `
+            <h2>Merci pour votre commande !</h2>
+            <p>Bonjour ${session.customer_details.name},</p>
+            <p>Votre commande a bien été validée.</p>
+            <p><strong>Produit :</strong> ${productName}</p>
+            <p><strong>Total :</strong> ${(session.amount_total / 100).toFixed(
+              2
+            )} €</p>
+            <p><strong>Adresse :</strong><br>
+              ${session.customer_details.address.line1}<br>
+              ${session.customer_details.address.postal_code} ${
+            session.customer_details.address.city
+          }<br>
+              ${session.customer_details.address.country}
+            </p>
+          `,
+        });
+        console.log("📧 Email client envoyé");
+      } catch (err) {
+        console.error("❌ Erreur email client :", err);
+      }
+
+      // ------------------------------
+      // EMAIL ADMIN
+      // ------------------------------
+      try {
+        await transporter.sendMail({
+          from: process.env.MAIL_FROM,
+          to: process.env.MAIL_USER,
+          subject: "Nouvelle commande Zoopoxy 🛒",
+          html: `
+            <h2>Nouvelle commande reçue</h2>
+            <p><strong>Produit :</strong> ${productName}</p>
+            <p><strong>Total :</strong> ${(session.amount_total / 100).toFixed(
+              2
+            )} €</p>
+            <p><strong>Client :</strong> ${session.customer_details.name}</p>
+            <p><strong>Email :</strong> ${session.customer_details.email}</p>
+            <p><strong>Adresse :</strong><br>
+              ${session.customer_details.address.line1}<br>
+              ${session.customer_details.address.postal_code} ${
+            session.customer_details.address.city
+          }<br>
+              ${session.customer_details.address.country}
+            </p>
+          `,
+        });
+        console.log("📧 Email admin envoyé");
+      } catch (err) {
+        console.error("❌ Erreur email admin :", err);
+      }
+    }
+
+    res.json({ received: true });
+  }
+);
+
+// ------------------------------
+// ⚠️ IMPORTANT : JSON APRÈS LE WEBHOOK
+// ------------------------------
+app.use(express.json());
+
+// ------------------------------
 // CHECKOUT STRIPE
 // ------------------------------
 app.post("/create-checkout-session", async (req, res) => {
@@ -81,10 +216,6 @@ app.post("/create-checkout-session", async (req, res) => {
             type: "fixed_amount",
             fixed_amount: { amount: 990, currency: "eur" },
             display_name: "Livraison France",
-            delivery_estimate: {
-              minimum: { unit: "business_day", value: 2 },
-              maximum: { unit: "business_day", value: 4 }
-            }
           }
         },
         {
@@ -92,10 +223,6 @@ app.post("/create-checkout-session", async (req, res) => {
             type: "fixed_amount",
             fixed_amount: { amount: 1939, currency: "eur" },
             display_name: "Livraison Europe",
-            delivery_estimate: {
-              minimum: { unit: "business_day", value: 3 },
-              maximum: { unit: "business_day", value: 7 }
-            }
           }
         },
         {
@@ -103,10 +230,6 @@ app.post("/create-checkout-session", async (req, res) => {
             type: "fixed_amount",
             fixed_amount: { amount: 2329, currency: "eur" },
             display_name: "Livraison Royaume-Uni",
-            delivery_estimate: {
-              minimum: { unit: "business_day", value: 4 },
-              maximum: { unit: "business_day", value: 8 }
-            }
           }
         },
         {
@@ -114,10 +237,6 @@ app.post("/create-checkout-session", async (req, res) => {
             type: "fixed_amount",
             fixed_amount: { amount: 2839, currency: "eur" },
             display_name: "International Zone B3",
-            delivery_estimate: {
-              minimum: { unit: "business_day", value: 5 },
-              maximum: { unit: "business_day", value: 12 }
-            }
           }
         },
         {
@@ -125,10 +244,6 @@ app.post("/create-checkout-session", async (req, res) => {
             type: "fixed_amount",
             fixed_amount: { amount: 3919, currency: "eur" },
             display_name: "International Zone C4",
-            delivery_estimate: {
-              minimum: { unit: "business_day", value: 7 },
-              maximum: { unit: "business_day", value: 15 }
-            }
           }
         }
       ],
@@ -154,123 +269,6 @@ app.post("/create-checkout-session", async (req, res) => {
     console.error("Erreur Stripe :", error);
     res.status(500).json({ error: error.message });
   }
-});
-
-// ------------------------------
-// WEBHOOK STRIPE (LIVE)
-// ------------------------------
-app.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req, res) => {
-  const sig = req.headers["stripe-signature"];
-
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(
-      req.body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err) {
-    console.error("❌ Erreur signature webhook :", err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
-
-    console.log("✔ Paiement reçu :", session.id);
-
-    // ------------------------------
-    // RÉCUPÉRATION DES LINE ITEMS
-    // ------------------------------
-    let productName = null;
-    try {
-      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
-        limit: 1
-      });
-      if (lineItems.data.length > 0) {
-        productName = lineItems.data[0].description;
-      }
-    } catch (err) {
-      console.error("❌ Erreur récupération line_items :", err);
-    }
-
-    // ------------------------------
-    // MISE À JOUR DU STOCK
-    // ------------------------------
-    if (productName) {
-      try {
-        const raw = fs.readFileSync("./stock.json", "utf8");
-        const stock = JSON.parse(raw);
-
-        const item = stock.find(p => p.name === productName);
-        if (item) {
-          item.qty = 0; // pièce unique → vendu
-          fs.writeFileSync("./stock.json", JSON.stringify(stock, null, 2));
-          console.log("✔ Stock mis à jour :", productName);
-        } else {
-          console.warn("⚠ Produit non trouvé dans stock.json :", productName);
-        }
-      } catch (err) {
-        console.error("❌ Erreur mise à jour stock :", err);
-      }
-    } else {
-      console.warn("⚠ Aucun nom de produit récupéré depuis Stripe");
-    }
-
-    // ------------------------------
-    // EMAIL CLIENT
-    // ------------------------------
-    try {
-      await transporter.sendMail({
-        from: process.env.MAIL_FROM,
-        to: session.customer_details.email,
-        subject: "Votre commande Zoopoxy est confirmée ✔",
-        html: `
-          <h2>Merci pour votre commande !</h2>
-          <p>Bonjour ${session.customer_details.name},</p>
-          <p>Votre commande a bien été validée.</p>
-          <p><strong>Produit :</strong> ${productName || "Votre œuvre Zoopoxy"}</p>
-          <p><strong>Total :</strong> ${(session.amount_total / 100).toFixed(2)} €</p>
-          <p><strong>Adresse :</strong><br>
-            ${session.customer_details.address.line1}<br>
-            ${session.customer_details.address.postal_code} ${session.customer_details.address.city}<br>
-            ${session.customer_details.address.country}
-          </p>
-        `
-      });
-      console.log("📧 Email client envoyé");
-    } catch (err) {
-      console.error("❌ Erreur email client :", err);
-    }
-
-    // ------------------------------
-    // EMAIL POUR TOI
-    // ------------------------------
-    try {
-      await transporter.sendMail({
-        from: process.env.MAIL_FROM,
-        to: process.env.MAIL_USER,
-        subject: "Nouvelle commande Zoopoxy 🛒",
-        html: `
-          <h2>Nouvelle commande reçue</h2>
-          <p><strong>Produit :</strong> ${productName || "Produit non identifié"}</p>
-          <p><strong>Total :</strong> ${(session.amount_total / 100).toFixed(2)} €</p>
-          <p><strong>Client :</strong> ${session.customer_details.name}</p>
-          <p><strong>Email :</strong> ${session.customer_details.email}</p>
-          <p><strong>Adresse :</strong><br>
-            ${session.customer_details.address.line1}<br>
-            ${session.customer_details.address.postal_code} ${session.customer_details.address.city}<br>
-            ${session.customer_details.address.country}
-          </p>
-        `
-      });
-      console.log("📧 Email admin envoyé");
-    } catch (err) {
-      console.error("❌ Erreur email admin :", err);
-    }
-  }
-
-  res.json({ received: true });
 });
 
 // ------------------------------
