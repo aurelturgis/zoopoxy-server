@@ -90,6 +90,13 @@
       "price": 11000,
       "image": "assets/images/epoxy/nishikigoi2.png",
       "qty": 1
-    }
+    },
+    {
+  "id": "TEST1EURO",
+  "name": "TEST 1 EURO",
+  "price": 100,
+  "image": "assets/images/epoxy/zenmaster2.png",
+  "qty": 1
+   }
   ]
 }
