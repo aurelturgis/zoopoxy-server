@@ -8,7 +8,7 @@ import nodemailer from "nodemailer";
 
 if (process.env.NODE_ENV !== "production") {
   dotenv.config();
-
+}
 const app = express();
 app.use(cors());
 
