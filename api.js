@@ -253,7 +253,7 @@ app.post("/create-checkout-session", async (req, res) => {
           currency: "eur",
           product_data: {
             name: item.name,
-            images: [item.image]
+            images: [`https://seagullairways.eu/${item.image}`]
           },
           unit_amount: item.price
         },
