@@ -6,7 +6,8 @@ import fs from "fs";
 import bodyParser from "body-parser";
 import nodemailer from "nodemailer";
 
-dotenv.config();
+if (process.env.NODE_ENV !== "production") {
+  dotenv.config();
 
 const app = express();
 app.use(cors());
