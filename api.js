@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import Stripe from "stripe";
 import fs from "fs";
 import bodyParser from "body-parser";
-import nodemailer from "nodemailer";
+import SibApiV3Sdk from "@sendinblue/client";
 
 if (process.env.NODE_ENV !== "production") {
   dotenv.config();
@@ -12,9 +12,7 @@ if (process.env.NODE_ENV !== "production") {
 
 const app = express();
 app.use(cors());
-
-// ⚠️ IMPORTANT : NE PAS mettre express.json() ici
-// Stripe a besoin du RAW BODY pour vérifier la signature
+app.use(express.json());
 
 // ------------------------------
 // STRIPE
@@ -22,27 +20,32 @@ app.use(cors());
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // ------------------------------
-// EMAIL (BREVO)
+// BREVO API (PAS SMTP)
 // ------------------------------
-const transporter = nodemailer.createTransport({
-  host: process.env.BREVO_HOST,          // smtp-relay.brevo.com
-  port: Number(process.env.BREVO_PORT),  // 587
-  secure: false,                         // STARTTLS sur 587
-  auth: {
-    user: process.env.BREVO_USER,        // ton email Brevo
-    pass: process.env.BREVO_PASS         // ta clé SMTP Brevo
-  },
-  tls: {
-    rejectUnauthorized: false
-  }
-});
+const brevo = new SibApiV3Sdk.TransactionalEmailsApi();
+brevo.setApiKey(
+  SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey,
+  process.env.BREVO_API_KEY
+);
 
 // ------------------------------
-// ROUTE D'ACCUEIL
+// FONCTION : FRAIS DE PORT AUTOMATIQUES
 // ------------------------------
-app.get("/", (req, res) => {
-  res.send("Serveur Zoopoxy opérationnel ✔️");
-});
+function getShippingCost(country) {
+  const FR = ["FR"];
+  const EU = ["BE","CH","LU","DE","ES","IT","NL","PT","AT","DK","SE","FI","IE"];
+  const UK = ["GB"];
+  const B3 = ["US","CA","AU","JP"];
+  const C4 = ["BR","AR","ZA","CN","IN"];
+
+  if (FR.includes(country)) return 990;
+  if (EU.includes(country)) return 1939;
+  if (UK.includes(country)) return 2329;
+  if (B3.includes(country)) return 2839;
+  if (C4.includes(country)) return 3919;
+
+  return 3919; // fallback
+}
 
 // ------------------------------
 // ROUTE STOCK
@@ -50,8 +53,7 @@ app.get("/", (req, res) => {
 app.get("/stock", (req, res) => {
   try {
     const raw = fs.readFileSync("./stock.json", "utf8");
-    const data = JSON.parse(raw);
-    res.json(data);
+    res.json(JSON.parse(raw));
   } catch (err) {
     console.error("Erreur lecture stock.json :", err);
     res.json({ stock: [] });
@@ -59,7 +61,7 @@ app.get("/stock", (req, res) => {
 });
 
 // ------------------------------
-// WEBHOOK STRIPE (RAW BODY)
+// WEBHOOK STRIPE
 // ------------------------------
 app.post(
   "/webhook",
@@ -85,7 +87,7 @@ app.post(
       console.log("✔ Paiement reçu :", session.id);
 
       // ------------------------------
-      // RÉCUPÉRATION DES LINE ITEMS
+      // RÉCUPÉRATION DU PRODUIT
       // ------------------------------
       let productName = null;
       try {
@@ -110,14 +112,12 @@ app.post(
 
           const item = stock.stock.find((p) => p.name === productName);
           if (item) {
-            item.qty = 0; // pièce unique → vendu
+            item.qty = 0;
             fs.writeFileSync(
               "./stock.json",
               JSON.stringify({ stock: stock.stock }, null, 2)
             );
             console.log("✔ Stock mis à jour :", productName);
-          } else {
-            console.warn("⚠ Produit non trouvé dans stock.json :", productName);
           }
         } catch (err) {
           console.error("❌ Erreur mise à jour stock :", err);
@@ -125,63 +125,57 @@ app.post(
       }
 
       // ------------------------------
-      // EMAIL CLIENT (BREVO)
+      // EMAIL CLIENT (BREVO API)
       // ------------------------------
       try {
-        await transporter.sendMail({
-          from: "contact@seagullairways.eu",
-          to: session.customer_details.email,
+        await brevo.sendTransacEmail({
+          sender: { name: "Zoopoxy", email: "contact@seagullairways.eu" },
+          to: [{ email: session.customer_details.email }],
           subject: "Votre commande Zoopoxy est confirmée ✔",
-          html: `
+          htmlContent: `
             <h2>Merci pour votre commande !</h2>
             <p>Bonjour ${session.customer_details.name},</p>
             <p>Votre commande a bien été validée.</p>
             <p><strong>Produit :</strong> ${productName}</p>
-            <p><strong>Total :</strong> ${(session.amount_total / 100).toFixed(
-              2
-            )} €</p>
+            <p><strong>Total :</strong> ${(session.amount_total / 100).toFixed(2)} €</p>
             <p><strong>Adresse :</strong><br>
               ${session.customer_details.address.line1}<br>
-              ${session.customer_details.address.postal_code} ${
-            session.customer_details.address.city
-          }<br>
+              ${session.customer_details.address.postal_code} ${session.customer_details.address.city}<br>
               ${session.customer_details.address.country}
             </p>
-          `,
+          `
         });
-        console.log("📧 Email client envoyé");
+
+        console.log("📧 Email client envoyé via API Brevo");
       } catch (err) {
-        console.error("❌ Erreur email client :", err);
+        console.error("❌ Erreur email client (API Brevo) :", err);
       }
 
       // ------------------------------
-      // EMAIL ADMIN (BREVO)
-// ------------------------------
+      // EMAIL ADMIN
+      // ------------------------------
       try {
-        await transporter.sendMail({
-          from: "contact@seagullairways.eu",
-          to: "contact@seagullairways.eu",
+        await brevo.sendTransacEmail({
+          sender: { name: "Zoopoxy", email: "contact@seagullairways.eu" },
+          to: [{ email: "contact@seagullairways.eu" }],
           subject: "Nouvelle commande Zoopoxy 🛒",
-          html: `
+          htmlContent: `
             <h2>Nouvelle commande reçue</h2>
             <p><strong>Produit :</strong> ${productName}</p>
-            <p><strong>Total :</strong> ${(session.amount_total / 100).toFixed(
-              2
-            )} €</p>
+            <p><strong>Total :</strong> ${(session.amount_total / 100).toFixed(2)} €</p>
             <p><strong>Client :</strong> ${session.customer_details.name}</p>
             <p><strong>Email :</strong> ${session.customer_details.email}</p>
             <p><strong>Adresse :</strong><br>
               ${session.customer_details.address.line1}<br>
-              ${session.customer_details.address.postal_code} ${
-            session.customer_details.address.city
-          }<br>
+              ${session.customer_details.address.postal_code} ${session.customer_details.address.city}<br>
               ${session.customer_details.address.country}
             </p>
-          `,
+          `
         });
-        console.log("📧 Email admin envoyé");
+
+        console.log("📧 Email admin envoyé via API Brevo");
       } catch (err) {
-        console.error("❌ Erreur email admin :", err);
+        console.error("❌ Erreur email admin (API Brevo) :", err);
       }
     }
 
@@ -190,73 +184,33 @@ app.post(
 );
 
 // ------------------------------
-// ⚠️ IMPORTANT : JSON APRÈS LE WEBHOOK
-// ------------------------------
-app.use(express.json());
-
-// ------------------------------
-// CHECKOUT STRIPE
+// CHECKOUT STRIPE AVEC FRAIS AUTO
 // ------------------------------
 app.post("/create-checkout-session", async (req, res) => {
   try {
+    const { items, country } = req.body;
+
+    const shippingCost = getShippingCost(country);
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
 
       customer_creation: "always",
       billing_address_collection: "required",
-
-      shipping_address_collection: {
-        allowed_countries: [
-          "FR",
-          "BE", "CH", "LU", "DE", "ES", "IT", "NL", "PT", "AT", "DK", "SE", "FI", "IE",
-          "GB",
-          "US", "CA", "AU", "JP",
-          "BR", "AR", "ZA", "CN", "IN"
-        ]
-      },
-
-      phone_number_collection: { enabled: true },
+      shipping_address_collection: { allowed_countries: ["*"] },
 
       shipping_options: [
         {
           shipping_rate_data: {
             type: "fixed_amount",
-            fixed_amount: { amount: 990, currency: "eur" },
-            display_name: "Livraison France",
-          }
-        },
-        {
-          shipping_rate_data: {
-            type: "fixed_amount",
-            fixed_amount: { amount: 1939, currency: "eur" },
-            display_name: "Livraison Europe",
-          }
-        },
-        {
-          shipping_rate_data: {
-            type: "fixed_amount",
-            fixed_amount: { amount: 2329, currency: "eur" },
-            display_name: "Livraison Royaume-Uni",
-          }
-        },
-        {
-          shipping_rate_data: {
-            type: "fixed_amount",
-            fixed_amount: { amount: 2839, currency: "eur" },
-            display_name: "International Zone B3",
-          }
-        },
-        {
-          shipping_rate_data: {
-            type: "fixed_amount",
-            fixed_amount: { amount: 3919, currency: "eur" },
-            display_name: "International Zone C4",
+            fixed_amount: { amount: shippingCost, currency: "eur" },
+            display_name: "Livraison automatique"
           }
         }
       ],
 
-      line_items: req.body.items.map(item => ({
+      line_items: items.map(item => ({
         price_data: {
           currency: "eur",
           product_data: {
@@ -280,7 +234,7 @@ app.post("/create-checkout-session", async (req, res) => {
 });
 
 // ------------------------------
-// LANCEMENT DU SERVEUR
+// LANCEMENT SERVEUR
 // ------------------------------
 const port = process.env.PORT || 10000;
 app.listen(port, () => {
