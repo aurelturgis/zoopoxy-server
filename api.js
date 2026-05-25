@@ -9,6 +9,7 @@ import nodemailer from "nodemailer";
 if (process.env.NODE_ENV !== "production") {
   dotenv.config();
 }
+
 const app = express();
 app.use(cors());
 
@@ -21,15 +22,18 @@ app.use(cors());
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // ------------------------------
-// EMAIL (IONOS)
+// EMAIL (BREVO)
 // ------------------------------
 const transporter = nodemailer.createTransport({
-  host: process.env.MAIL_HOST,
-  port: Number(process.env.MAIL_PORT),
-  secure: process.env.MAIL_SECURE === "true",
+  host: process.env.BREVO_HOST,          // smtp-relay.brevo.com
+  port: Number(process.env.BREVO_PORT),  // 587
+  secure: false,                         // STARTTLS sur 587
   auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS
+    user: process.env.BREVO_USER,        // ton email Brevo
+    pass: process.env.BREVO_PASS         // ta clé SMTP Brevo
+  },
+  tls: {
+    rejectUnauthorized: false
   }
 });
 
@@ -107,7 +111,10 @@ app.post(
           const item = stock.stock.find((p) => p.name === productName);
           if (item) {
             item.qty = 0; // pièce unique → vendu
-            fs.writeFileSync("./stock.json", JSON.stringify({ stock: stock.stock }, null, 2));
+            fs.writeFileSync(
+              "./stock.json",
+              JSON.stringify({ stock: stock.stock }, null, 2)
+            );
             console.log("✔ Stock mis à jour :", productName);
           } else {
             console.warn("⚠ Produit non trouvé dans stock.json :", productName);
@@ -118,11 +125,11 @@ app.post(
       }
 
       // ------------------------------
-      // EMAIL CLIENT
+      // EMAIL CLIENT (BREVO)
       // ------------------------------
       try {
         await transporter.sendMail({
-          from: process.env.MAIL_FROM,
+          from: "contact@seagullairways.eu",
           to: session.customer_details.email,
           subject: "Votre commande Zoopoxy est confirmée ✔",
           html: `
@@ -148,12 +155,12 @@ app.post(
       }
 
       // ------------------------------
-      // EMAIL ADMIN
-      // ------------------------------
+      // EMAIL ADMIN (BREVO)
+// ------------------------------
       try {
         await transporter.sendMail({
-          from: process.env.MAIL_FROM,
-          to: process.env.MAIL_USER,
+          from: "contact@seagullairways.eu",
+          to: "contact@seagullairways.eu",
           subject: "Nouvelle commande Zoopoxy 🛒",
           html: `
             <h2>Nouvelle commande reçue</h2>
