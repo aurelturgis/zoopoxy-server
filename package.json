@@ -6,12 +6,11 @@
   "scripts": {
     "start": "node api.js"
   },
-  "dependencies": {
-    "body-parser": "^1.20.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "nodemailer": "^6.9.13",
-    "stripe": "^14.0.0"
-  }
+ "dependencies": {
+  "@sendinblue/client": "^3.3.1",
+  "body-parser": "^1.20.2",
+  "cors": "^2.8.5",
+  "dotenv": "^16.4.5",
+  "express": "^4.19.2",
+  "stripe": "^14.0.0"
 }
