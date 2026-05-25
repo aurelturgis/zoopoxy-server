@@ -184,13 +184,11 @@ app.post(
 );
 
 // ------------------------------
-// CHECKOUT STRIPE AVEC FRAIS AUTO
+// CHECKOUT STRIPE (sans pays côté front)
 // ------------------------------
 app.post("/create-checkout-session", async (req, res) => {
   try {
-    const { items, country } = req.body;
-
-    const shippingCost = getShippingCost(country);
+    const { items } = req.body;
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -200,15 +198,8 @@ app.post("/create-checkout-session", async (req, res) => {
       billing_address_collection: "required",
       shipping_address_collection: { allowed_countries: ["*"] },
 
-      shipping_options: [
-        {
-          shipping_rate_data: {
-            type: "fixed_amount",
-            fixed_amount: { amount: shippingCost, currency: "eur" },
-            display_name: "Livraison automatique"
-          }
-        }
-      ],
+      // ⭐ Pas de frais ici — Stripe collecte l'adresse d'abord
+      shipping_options: [],
 
       line_items: items.map(item => ({
         price_data: {
@@ -227,11 +218,13 @@ app.post("/create-checkout-session", async (req, res) => {
     });
 
     res.json({ url: session.url });
+
   } catch (error) {
     console.error("Erreur Stripe :", error);
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // ------------------------------
 // LANCEMENT SERVEUR
